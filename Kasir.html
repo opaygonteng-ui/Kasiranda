@@ -1,0 +1,457 @@
+<!DOCTYPE html><html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kasir Toko</title><style>
+
+body{
+font-family:Arial;
+background:#f4f4f4;
+margin:0;
+padding:12px;
+display:flex;
+justify-content:center
+}
+
+.box{
+background:#fff;
+padding:16px;
+border-radius:12px;
+box-shadow:0 4px 10px rgba(0,0,0,.1);
+width:100%;
+max-width:340px
+}
+
+h2{
+text-align:center;
+margin:0
+}
+
+.alamat{
+text-align:center;
+font-size:12px;
+margin-bottom:6px
+}
+
+.row{
+display:flex;
+gap:6px;
+margin:6px 0
+}
+
+input{
+padding:6px;
+font-size:14px;
+box-sizing:border-box;
+}
+
+#hargaMenu{
+width:90px;
+flex:unset;
+}
+
+#namaMenu{
+flex:1;
+}
+
+.qty{
+width:55px;
+flex:unset
+}
+
+button{
+padding:6px 10px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+font-size:13px
+}
+
+.btnAdd{
+background:#28a745;
+color:#fff;
+width:100%
+}
+
+.btnEdit{
+background:#ffc107
+}
+
+.btnDel{
+background:#dc3545;
+color:#fff
+}
+
+.btnMain{
+width:100%;
+background:#007bff;
+color:#fff;
+margin-top:8px
+}
+
+.totalLive{
+margin-top:10px;
+font-weight:bold;
+text-align:center
+}
+
+.menuList{
+margin-top:10px;
+border-top:1px solid #ccc;
+padding-top:8px
+}
+
+.adminPanel{
+display:none;
+border-top:1px solid #ccc;
+margin-top:10px;
+padding-top:10px
+}
+
+.struk{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#fff;
+padding:16px;
+display:none;
+font-family:monospace
+}
+
+.small{
+font-size:13px
+}
+
+.laporan{
+font-size:13px;
+margin-top:10px;
+border-top:1px solid #ccc;
+padding-top:6px
+}
+
+</style></head><body><div class="box"><h2 id="namaToko">TOKO</h2>
+<div class="alamat" id="alamatToko"></div><button class="btnMain" onclick="toggleAdmin()">ADMIN</button>
+
+<div class="adminPanel" id="adminPanel"><b>Pengaturan Toko</b>
+
+<div class="row">
+<input id="setNamaToko" placeholder="Nama toko">
+</div><div class="row">
+<input id="setAlamatToko" placeholder="Alamat toko">
+</div><button class="btnAdd" onclick="simpanToko()">Simpan Data Toko</button>
+
+<hr><b>Tambah Menu</b>
+
+<div class="row">
+<input id="namaMenu" placeholder="Nama menu">
+<input id="hargaMenu" type="number" placeholder="Harga">
+</div><button class="btnAdd" onclick="tambahMenu()">Tambah Menu</button>
+
+</div><div class="menuList" id="menuList"></div><div class="row">
+Bayar
+<input id="bayar" type="number">
+</div><div class="totalLive" id="totalLive">Total: Rp 0</div><button class="btnMain" onclick="tampilkanStruk()">Tampilkan Struk</button>
+
+<div class="laporan" id="laporanHarian"></div>
+<button class="btnMain" style="background:#6c757d" onclick="resetLaporan()">Reset Laporan</button><div class="struk" id="areaStruk"></div><audio id="snd" src="cring.mp3" preload="auto"></audio>
+
+</div><script>
+
+function el(id){
+return document.getElementById(id)
+}
+
+let menu = JSON.parse(localStorage.getItem("menuKasir")||"[]")
+let toko = JSON.parse(localStorage.getItem("dataToko")||"{}")
+let laporan = JSON.parse(localStorage.getItem("laporanKasir")||"{}")
+
+function simpanMenu(){
+localStorage.setItem("menuKasir",JSON.stringify(menu))
+}
+
+function simpanDataToko(){
+localStorage.setItem("dataToko",JSON.stringify(toko))
+}
+
+function simpanLaporan(){
+localStorage.setItem("laporanKasir",JSON.stringify(laporan))
+}
+
+function toggleAdmin(){
+
+let panel=el("adminPanel")
+
+panel.style.display =
+panel.style.display=="block" ? "none":"block"
+
+el("setNamaToko").value=toko.nama||""
+el("setAlamatToko").value=toko.alamat||""
+
+}
+
+function simpanToko(){
+
+toko.nama=el("setNamaToko").value
+toko.alamat=el("setAlamatToko").value
+
+simpanDataToko()
+
+updateToko()
+
+alert("Data toko disimpan")
+
+}
+
+function updateToko(){
+
+el("namaToko").innerText=toko.nama||"TOKO"
+el("alamatToko").innerText=toko.alamat||""
+
+}
+
+function tambahMenu(){
+
+let nama=el("namaMenu").value.trim()
+let harga=parseInt(el("hargaMenu").value)
+
+if(!nama||!harga) return alert("Isi nama & harga")
+
+menu.push({nama,harga})
+
+simpanMenu()
+
+el("namaMenu").value=""
+el("hargaMenu").value=""
+
+renderMenu()
+
+}
+
+function editMenu(i){
+
+let nama=prompt("Nama baru",menu[i].nama)
+if(nama===null) return
+
+let harga=prompt("Harga baru",menu[i].harga)
+if(harga===null) return
+
+menu[i]={nama:nama,harga:parseInt(harga)}
+
+simpanMenu()
+
+renderMenu()
+
+}
+
+function hapusMenu(i){
+
+if(!confirm("Hapus menu?")) return
+
+menu.splice(i,1)
+
+simpanMenu()
+
+renderMenu()
+
+}
+
+function renderMenu(){
+
+let html=""
+
+menu.forEach((m,i)=>{
+
+html+=`
+<div class="row small">
+<span style="flex:1">${m.nama} (Rp ${m.harga.toLocaleString('id-ID')})</span>
+<input class="qty" type="number" min="0" data-i="${i}">
+<button class="btnEdit" onclick="editMenu(${i})">Edit</button>
+<button class="btnDel" onclick="hapusMenu(${i})">X</button>
+</div>
+`
+
+})
+
+el("menuList").innerHTML=html
+
+document.querySelectorAll(".qty").forEach(inp=>{
+inp.addEventListener("input",updateTotal)
+})
+
+updateTotal()
+
+}
+
+function hitungTotal(){
+
+let total=0
+
+document.querySelectorAll(".qty").forEach(inp=>{
+
+let i=parseInt(inp.dataset.i)
+let qty=parseInt(inp.value)||0
+
+total+=qty*menu[i].harga
+
+})
+
+return total
+
+}
+
+function updateTotal(){
+
+el("totalLive").innerText =
+"Total: Rp "+hitungTotal().toLocaleString("id-ID")
+
+}
+
+function buatRincian(){
+
+let html=""
+
+document.querySelectorAll(".qty").forEach(inp=>{
+
+let i=parseInt(inp.dataset.i)
+let qty=parseInt(inp.value)||0
+
+if(qty>0){
+
+html+=`${menu[i].nama} x${qty} = Rp ${(qty*menu[i].harga).toLocaleString('id-ID')}<br>`
+
+}
+
+})
+
+return html||"Tidak ada item<br>"
+
+}
+
+function tampilkanStruk(){
+
+let total=hitungTotal()
+let bayar=parseInt(el("bayar").value)||0
+let kembali=bayar-total
+
+let now=new Date()
+let tanggal=now.toLocaleDateString("id-ID")
+let jam=now.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})
+
+let html=`
+
+<div style="text-align:center;font-weight:bold;font-size:18px">
+${toko.nama||"TOKO"}
+</div>
+
+<div style="text-align:center;font-size:12px">
+${toko.alamat||""}
+</div>
+
+<hr>
+
+${buatRincian()}
+
+<hr>
+
+Total : Rp ${total.toLocaleString('id-ID')}<br>
+Bayar : Rp ${bayar.toLocaleString('id-ID')}<br>
+Kembali : Rp ${kembali.toLocaleString('id-ID')}<br>
+
+<hr>
+
+<button onclick="koreksi()" style="width:48%">KOREKSI</button>
+<button onclick="lunas()" style="width:48%;background:#28a745;color:#fff">LUNAS</button>
+
+`
+
+el("areaStruk").innerHTML=html
+el("areaStruk").style.display="block"
+
+}
+
+function koreksi(){
+
+el("areaStruk").style.display="none"
+
+}
+
+function lunas(){
+
+document.querySelectorAll(".qty").forEach(inp=>{
+
+let i=parseInt(inp.dataset.i)
+let qty=parseInt(inp.value)||0
+
+if(qty>0){
+
+let nama=menu[i].nama
+
+if(!laporan[nama])
+laporan[nama]={qty:0,harga:menu[i].harga}
+
+laporan[nama].qty+=qty
+
+}
+
+})
+
+simpanLaporan()
+
+updateLaporan()
+
+let snd=el("snd")
+if(snd){snd.currentTime=0;snd.play().catch(()=>{})}
+
+document.querySelectorAll(".qty").forEach(i=>i.value="")
+el("bayar").value=""
+
+updateTotal()
+
+el("areaStruk").style.display="none"
+
+}
+
+function updateLaporan(){
+
+let html="<b>Laporan Hari Ini</b><br>"
+
+let total=0
+
+Object.keys(laporan).forEach(nama=>{
+
+let data=laporan[nama]
+
+let uang=data.qty*data.harga
+
+total+=uang
+
+html+=`${nama} : ${data.qty} (Rp ${uang.toLocaleString('id-ID')})<br>`
+
+})
+
+html+=`<b>Total uang : Rp ${total.toLocaleString('id-ID')}</b>`
+
+el("laporanHarian").innerHTML=html
+
+}
+
+function resetLaporan(){
+
+if(!confirm("Reset laporan hari ini?")) return
+
+laporan={}
+
+simpanLaporan()
+
+updateLaporan()
+
+}
+
+updateToko()
+renderMenu()
+updateLaporan()
+
+</script></body>
+</html>
